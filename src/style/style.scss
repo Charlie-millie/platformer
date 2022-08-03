@@ -1,0 +1,14 @@
+@import "variable";
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: $bgColor;
+    #screen {
+        display: block;
+        height: 100vh;
+        margin: auto;
+        image-rendering: pixelated;
+    }
+}
+
