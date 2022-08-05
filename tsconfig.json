@@ -1,9 +1,16 @@
 {
     "compilerOptions": {
-        "module": "ES2015",
-        "target": "es5",
-        "sourceMap": true
+        "target": "es2018",
+        "module": "esnext",
+        "moduleResolution": "node",
+        "lib": ["dom", "esnext"],
+        "strict": true,
+        "noUnusedLocals": true,
+        "esModuleInterop": true,
+        "downlevelIteration": true,
+        "resolveJsonModule": true
     },
+    "include": ["src"],
     "exclude": [
         "node_modules"
     ]
