@@ -9,7 +9,7 @@ export class Vec2 {
         this.y = y;
     }
 
-    copy(other: Vec2) {
+    public copy(other: Vec2) {
         this.set(other.x, other.y);
     }
 }
