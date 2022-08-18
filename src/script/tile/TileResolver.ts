@@ -7,6 +7,8 @@ export class TileResolver {
     constructor(public matrix: TileResolverMatrix, public tileSize = 16) {
     }
 
-
+    public toIndex(pos: number) {
+        return Math.floor(pos / this.tileSize);
+    }
 
 }
