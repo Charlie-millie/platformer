@@ -7,6 +7,6 @@ export class TileResolver {
     constructor(public matrix: TileResolverMatrix, public tileSize = 16) {
     }
 
-    
+
 
 }
