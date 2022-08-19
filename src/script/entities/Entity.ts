@@ -5,7 +5,7 @@ import {EventBuffer} from "../Event/EventBuffer";
 import {GameContext} from "../context";
 import {Level} from "../Level";
 import {Side} from "../constant";
-import {TileResolverMatch} from "../tile/TileResolverMatch";
+import {TileResolverMatch} from "../tiles/TileResolverMatch";
 import {AudioBoard} from "../sounds/AudioBoard";
 
 type TraitConstructor<T extends Trait> = new (...args: unknown[]) => T;

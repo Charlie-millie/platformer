@@ -2,7 +2,7 @@ import {Entity} from "../entities/Entity";
 import {GameContext} from "../context";
 import {Level} from "../Level";
 import {Side} from "../constant";
-import {TileResolverMatch} from "../tile/TileResolverMatch";
+import {TileResolverMatch} from "../tiles/TileResolverMatch";
 
 type TraitListener = {
     name: string | symbol,
