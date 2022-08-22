@@ -1,5 +1,6 @@
 import {Trait} from "./index";
 import {Entity} from "../entities/Entity";
+import {Killable} from "./Killable";
 
 export class Stomper extends Trait {
     static EVENT_STOMP = Symbol('stomp');
@@ -12,6 +13,15 @@ export class Stomper extends Trait {
     }
 
     public collides(us: Entity, them: Entity) {
-        // const killable = them.getTrait()
+        const killable = them.getTrait(Killable);
+        if (!killable || killable.dead) {
+            return;
+        }
+
+        if (us.vel.y > them.vel.y) {
+            this.queue(() => this.bounce(us, them));
+            us.sounds.add('stomp');
+            us.events.emit(Stomper.EVENT_STOMP, us, them);
+        }
     }
 }
