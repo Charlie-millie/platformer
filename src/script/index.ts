@@ -1,5 +1,7 @@
 import "../style/style.scss";
 import {throwError} from "./utils/throwError";
+import {loadEntities} from "./entities";
+import {loadFont} from "./loaders/font";
 
 async function main(canvas: HTMLCanvasElement) {
     const context = canvas.getContext("2d") || throwError("Canvas not supported!");
@@ -8,9 +10,12 @@ async function main(canvas: HTMLCanvasElement) {
 
     const audioContext = new AudioContext();
 
+    const [entityFactory, font] = await Promise.all([
+        loadEntities(audioContext),
+        loadFont()
+    ]);
 
-
-
+    // const loadLevel = crea
 
 }
 
