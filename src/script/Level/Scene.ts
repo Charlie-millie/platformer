@@ -1,4 +1,4 @@
-import {Compositor} from "../Layer/Compositor";
+import {Compositor} from "../Layers/Compositor";
 import {EventEmitter} from "../Event/EventEmitter";
 import {GameContext} from "../context";
 import {Camera} from "../Camera";
