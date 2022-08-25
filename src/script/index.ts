@@ -2,6 +2,13 @@ import "../style/style.scss";
 import {throwError} from "./utils/throwError";
 import {loadEntities} from "./entities";
 import {loadFont} from "./loaders/font";
+import {createLevelLoader} from "./loaders/level";
+import {SceneRunner} from "./Level/SceneRunner";
+import {makePlayer} from "./player";
+import {setupKeyboard} from "./input";
+import {Scene} from "./Level/Scene";
+import {createColorLayer, createTextLayer} from "./Layers";
+import {Level} from "./Level";
 
 async function main(canvas: HTMLCanvasElement) {
     const context = canvas.getContext("2d") || throwError("Canvas not supported!");
@@ -15,7 +22,29 @@ async function main(canvas: HTMLCanvasElement) {
         loadFont()
     ]);
 
-    // const loadLevel = crea
+    const loadLevel = createLevelLoader(entityFactory);
+    const sceneRunner = new SceneRunner();
+
+    const mario = entityFactory.mario?.() || throwError('where mario tho?');
+    makePlayer(mario, 'MARIO');
+
+    const inputRouter = setupKeyboard(window);
+    inputRouter.addReceiver(mario);
+
+    async function runLevel(name: string) {
+        const loadScreen = new Scene();
+        loadScreen.comp.layers.push(createColorLayer('black'));
+        loadScreen.comp.layers.push(createTextLayer(font, `LOADING ${name}...`));
+        sceneRunner.addScene(loadScreen);
+        sceneRunner.runNext();
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const level = await loadLevel(name);
+        level.events.listen(Level.EVENT_TRIGGER, () => {
+
+        });
+
+    }
 
 }
 

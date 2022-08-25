@@ -10,6 +10,9 @@ import {Matrix} from "../Math";
 import {throwError} from "../utils/throwError";
 import {createBackgroundLayer} from "../Layers/background";
 import {createSpriteLayer} from "../Layers/sprites";
+import {Trigger} from "../Trait/Trigger";
+import {Entity} from "../entities/Entity";
+import {LevelTimer} from "../Trait/LevelTimer";
 
 function loadPattern(name: string) {
     return loadJSON<LevelSpecPatterns>(`/sprites/patterns/${name}.json`);
@@ -41,8 +44,34 @@ export function setupTriggers(levelSpec: LevelSpec, level: Level) {
     if (!levelSpec.triggers) return;
 
     for (const triggerSpec of levelSpec.triggers) {
-        // const trigger - new Tri
+        const trigger = new Trigger();
+        trigger.conditions.push((entity, touches, gc, level) => {
+            level.events.emit(Level.EVENT_TRIGGER, triggerSpec, entity, touches);
+        });
+
+        const entity = new Entity();
+        entity.addTrait(trigger);
+        entity.pos.set(...triggerSpec.pos);
+        entity.size.set(64, 64);
+
+        level.entities.add(entity);
     }
+}
+function createTimer() {
+    const timer = new Entity();
+    timer.addTrait(new LevelTimer());
+    return timer;
+}
+function setupBehavior(level: Level) {
+    const timer = createTimer();
+    level.entities.add(timer);
+
+    level.events.listen(LevelTimer.EVENT_TIMER_OK, () => {
+        level.music.playTheme();
+    });
+    level.events.listen(LevelTimer.EVENT_TIMER_HURRY, () => {
+       level.music.playHurryTheme();
+    });
 }
 
 export function createLevelLoader(entityFactory: EntityFactoryDict) {
@@ -61,8 +90,10 @@ export function createLevelLoader(entityFactory: EntityFactoryDict) {
 
         setupBackground(levelSpec,level, backgroundSprites, patterns);
         setupEntities(levelSpec, level, entityFactory);
+        setupTriggers(levelSpec, level);
+        setupBehavior(level);
 
-
+        return level;
     }
 }
 
