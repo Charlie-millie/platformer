@@ -4,11 +4,20 @@ import {loadEntities} from "./entities";
 import {loadFont} from "./loaders/font";
 import {createLevelLoader} from "./loaders/level";
 import {SceneRunner} from "./Level/SceneRunner";
-import {makePlayer} from "./player";
+import {createPlayerEnv, makePlayer} from "./player";
 import {setupKeyboard} from "./input";
 import {Scene} from "./Level/Scene";
 import {createColorLayer, createTextLayer} from "./Layers";
 import {Level} from "./Level";
+import {LevelSpecTrigger} from "./types";
+import {Entity} from "./entities/Entity";
+import {Player} from "./Trait/Player";
+import {createPlayerProgressLayer} from "./Layers/player-progress";
+import {createDashboardLayer} from "./Layers/dashboard";
+import {TimedScene} from "./Level/TimedScene";
+import {createCollisionLayer} from "./Layers/collision";
+import {Timer} from "./utils/Timer";
+import {GameContext} from "./context";
 
 async function main(canvas: HTMLCanvasElement) {
     const context = canvas.getContext("2d") || throwError("Canvas not supported!");
@@ -40,14 +49,54 @@ async function main(canvas: HTMLCanvasElement) {
 
         await new Promise((resolve) => setTimeout(resolve, 500));
         const level = await loadLevel(name);
-        level.events.listen(Level.EVENT_TRIGGER, () => {
-
+        level.events.listen(Level.EVENT_TRIGGER, (spec: LevelSpecTrigger, trigger: Entity, touches: Set<Entity>) => {
+            if (spec.type === 'goto') {
+                for (const entity of touches) {
+                    if (entity.getTrait(Player)) {
+                        runLevel(spec.name);
+                        return;
+                    }
+                }
+            }
         });
 
+        const playerProgressLayer = createPlayerProgressLayer(font, level);
+        const dashboardLayer = createDashboardLayer(font, level);
+
+        mario.pos.set(0, 0);
+        mario.vel.set(0, 0);
+        level.entities.add(mario);
+
+        const playerEnv = createPlayerEnv(mario);
+        level.entities.add(playerEnv);
+
+        const waitScreen = new TimedScene();
+        waitScreen.comp.layers.push(createColorLayer('black'));
+        waitScreen.comp.layers.push(dashboardLayer);
+        waitScreen.comp.layers.push(playerProgressLayer);
+        sceneRunner.addScene(waitScreen);
+
+        level.comp.layers.push(createCollisionLayer(level));
+        level.comp.layers.push(dashboardLayer);
+        sceneRunner.addScene(level);
+        sceneRunner.runNext();
     }
 
-}
+    const timer = new Timer();
+    timer.update = function update(deltaTime) {
+        if (!document.hasFocus()) return;
 
+        const gameContext: GameContext = {
+            deltaTime,
+            audioContext,
+            entityFactory,
+            videoContext
+        };
+        sceneRunner.update(gameContext);
+    }
+    timer.start();
+    runLevel('debug-progression');
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     const canvas = document.getElementById("screen");
