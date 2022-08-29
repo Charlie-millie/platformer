@@ -20,9 +20,9 @@ import {Timer} from "./utils/Timer";
 import {GameContext} from "./context";
 
 async function main(canvas: HTMLCanvasElement) {
-    const context = canvas.getContext("2d") || throwError("Canvas not supported!");
+    const videoContext = canvas.getContext("2d") || throwError("Canvas not supported!");
 
-    context.imageSmoothingEnabled = false;
+    videoContext.imageSmoothingEnabled = false;
 
     const audioContext = new AudioContext();
 
