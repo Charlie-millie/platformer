@@ -43,7 +43,7 @@ export class Entity {
         this.traits.forEach((trait) => {
             trait.update(this, gameContext, level);
         });
-        // if (this.audio) this.playSounds(this.audio, gameContext.audioContext);
+        if (this.audio) this.playSounds(this.audio, gameContext.audioContext);
         this.lifetime += gameContext.deltaTime;
     }
 

@@ -38,7 +38,7 @@ export type LevelSpecTile = {
     type: string;
     name?: string;
     pattern?: string;
-    ranges: TileRange;
+    ranges: TileRange[];
 };
 
 export type TileSpec = {
