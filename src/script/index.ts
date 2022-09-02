@@ -96,6 +96,8 @@ async function main(canvas: HTMLCanvasElement) {
     }
     timer.start();
     runLevel('debug-progression');
+
+    console.log("run main....");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -103,6 +105,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (canvas instanceof HTMLCanvasElement) {
         main(canvas).catch(e => console.error(e));
     } else {
-        console.warn("Try Modern browser");
+        console.warn("Try Modern browser!");
     }
 });

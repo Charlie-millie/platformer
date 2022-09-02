@@ -1549,6 +1549,7 @@
         };
         timer.start();
         runLevel('debug-progression');
+        console.log("run main....");
     }
     document.addEventListener("DOMContentLoaded", () => {
         const canvas = document.getElementById("screen");
@@ -1556,7 +1557,7 @@
             main(canvas).catch(e => console.error(e));
         }
         else {
-            console.warn("Try Modern browser");
+            console.warn("Try Modern browser!");
         }
     });
 
