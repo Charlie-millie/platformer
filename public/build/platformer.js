@@ -1310,7 +1310,7 @@
             leftState = keyState;
             router.route((entity) => {
                 entity.useTrait(Go, (go) => {
-                    go.dir = rightState = leftState;
+                    go.dir = rightState - leftState;
                 });
             });
         });
