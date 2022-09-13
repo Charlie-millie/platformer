@@ -4,6 +4,7 @@ import {loadMario} from "./Mario";
 import {loadGoomba} from "./Goomba";
 import {loadBullet} from "./Bullet";
 import {loadCannon} from "./Cannon";
+import {loadKoopa} from "./Koopa";
 
 export type EntityFactory = () => Entity;
 export type EntityFactoryDict = Dict<EntityFactory>;
@@ -18,6 +19,7 @@ export async function loadEntities(audioContext: AudioContext): Promise<EntityFa
     await Promise.all([
         loadMario(audioContext).then(addAs('mario')),
         loadGoomba().then(addAs('goomba')),
+        loadKoopa().then(addAs('koopa')),
         loadBullet().then(addAs('bullet')),
         loadCannon(audioContext).then(addAs('cannon')),
     ]);
