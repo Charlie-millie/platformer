@@ -617,13 +617,399 @@
         };
     }
 
+    class PendulumMove extends Trait {
+        constructor() {
+            super(...arguments);
+            this.speed = -30;
+            this.enabled = true;
+        }
+        update(ent) {
+            if (this.enabled) {
+                ent.vel.x = this.speed;
+            }
+        }
+        obstruct(ent, side) {
+            if (side === Side.left) {
+                this.speed = Math.abs(this.speed);
+            }
+            else if (side === Side.right) {
+                this.speed = -Math.abs(this.speed);
+            }
+        }
+    }
+
+    class GoombaBehavior extends Trait {
+        collides(us, them) {
+            var _a, _b;
+            if ((_a = us.getTrait(Killable)) === null || _a === void 0 ? void 0 : _a.dead) {
+                return;
+            }
+            const stomper = them.getTrait(Stomper);
+            if (stomper) {
+                if (them.vel.y > us.vel.y) {
+                    us.useTrait(PendulumMove, (pm) => (pm.speed = 0));
+                    us.useTrait(Killable, (k) => k.kill());
+                }
+                else {
+                    (_b = them.getTrait(Killable)) === null || _b === void 0 ? void 0 : _b.kill();
+                }
+            }
+        }
+    }
+    class Goomba extends Entity {
+        constructor(sprites, walkAnim) {
+            super();
+            this.sprites = sprites;
+            this.walkAnim = walkAnim;
+            this.walk = this.addTrait(new PendulumMove());
+            this.behavior = this.addTrait(new GoombaBehavior());
+            this.killable = this.addTrait(new Killable());
+            this.solid = this.addTrait(new Solid());
+            this.physics = this.addTrait(new Physics());
+            this.size.set(16, 16);
+        }
+        draw(context) {
+            this.sprites.draw(this.routeAnim(), context, 0, 0);
+        }
+        routeAnim() {
+            if (this.killable.dead) {
+                return 'flat';
+            }
+            return this.walkAnim(this.lifetime);
+        }
+    }
+    async function loadGoomba() {
+        const sprites = await loadSpriteSheet('goomba');
+        const walkAnim = sprites.getAnimation('walk');
+        return function createGoomba() {
+            return new Goomba(sprites, walkAnim);
+        };
+    }
+
+    class Gravity extends Trait {
+        update(entity, { deltaTime }, level) {
+            entity.vel.y += level.gravity * deltaTime;
+        }
+    }
+
+    class Velocity extends Trait {
+        update(entity, { deltaTime }) {
+            entity.pos.x += entity.vel.x * deltaTime;
+            entity.pos.y += entity.vel.y * deltaTime;
+        }
+    }
+
+    class BulletBehavior extends Trait {
+        constructor() {
+            super(...arguments);
+            this.gravity = new Gravity();
+        }
+        collides(us, them) {
+            var _a, _b, _c;
+            if ((_a = us.getTrait(Killable)) === null || _a === void 0 ? void 0 : _a.dead) {
+                return;
+            }
+            const stomper = them.getTrait(Stomper);
+            if (stomper) {
+                if (them.vel.y > us.vel.y) {
+                    (_b = us.getTrait(Killable)) === null || _b === void 0 ? void 0 : _b.kill();
+                    us.vel.set(100, -200);
+                }
+                else {
+                    (_c = them.getTrait(Killable)) === null || _c === void 0 ? void 0 : _c.kill();
+                }
+            }
+        }
+        update(entity, gameContext, level) {
+            var _a;
+            if ((_a = entity.getTrait(Killable)) === null || _a === void 0 ? void 0 : _a.dead) {
+                this.gravity.update(entity, gameContext, level);
+            }
+        }
+    }
+    async function loadBullet() {
+        const sprites = await loadSpriteSheet('bullet');
+        return function createBullet() {
+            const bullet = new Entity();
+            bullet.size.set(16, 14);
+            bullet.vel.set(80, 0);
+            bullet.addTrait(new BulletBehavior());
+            bullet.addTrait(new Killable());
+            bullet.addTrait(new Velocity());
+            bullet.draw = (context) => {
+                sprites.draw('bullet', context, 0, 0, bullet.vel.x < 0);
+            };
+            return bullet;
+        };
+    }
+
+    const COIN_LIFE_THRESHOLD = 100;
+    class Player extends Trait {
+        constructor() {
+            super();
+            this.name = 'UNNAMED';
+            this.coins = 0;
+            this.lives = 3;
+            this.score = 0;
+            this.listen(Stomper.EVENT_STOMP, () => {
+                this.score += 100;
+            });
+        }
+        addCoins(count) {
+            this.coins += count;
+            while (this.coins >= COIN_LIFE_THRESHOLD) {
+                this.addLives(1);
+                this.coins -= COIN_LIFE_THRESHOLD;
+            }
+            this.queue((entity) => entity.sounds.add('coin'));
+        }
+        addLives(count) {
+            this.lives += count;
+        }
+    }
+
+    class PlayerController extends Trait {
+        constructor(player) {
+            super();
+            this.player = player;
+            this.checkPoint = new Vec2(0, 0);
+        }
+        update(_, __, level) {
+            var _a;
+            if (!level.entities.has(this.player)) {
+                (_a = this.player.getTrait(Killable)) === null || _a === void 0 ? void 0 : _a.revive();
+                this.player.pos.set(this.checkPoint.x, this.checkPoint.y);
+                level.entities.add(this.player);
+            }
+        }
+    }
+
+    function createPlayerEnv(playerEntity) {
+        const playerEnv = new Entity();
+        const playerControl = new PlayerController(playerEntity);
+        playerControl.checkPoint.set(64, 64);
+        playerEnv.addTrait(playerControl);
+        return playerEnv;
+    }
+    function* findPlayers(entities) {
+        for (const entity of entities) {
+            if (entity.getTrait(Player))
+                yield entity;
+        }
+    }
+    function makePlayer(entity, name) {
+        const player = new Player();
+        player.name = name;
+        entity.addTrait(player);
+    }
+
+    class Emitter extends Trait {
+        constructor() {
+            super(...arguments);
+            this.interval = 2;
+            this.coolDown = this.interval;
+            this.emitters = [];
+        }
+        update(entity, gameContext, level) {
+            this.coolDown -= gameContext.deltaTime;
+            if (this.coolDown <= 0) ;
+        }
+        emit(entity, gameContext, level) {
+            for (const emitter of this.emitters) {
+                emitter(entity, gameContext, level);
+            }
+        }
+    }
+
+    const HOLD_FIRE_THRESHOLD = 30;
+    async function loadCannon(audioContext) {
+        const audio = await loadAudioBoard('cannon', audioContext);
+        const getDiffX = (e1, e2) => Math.abs(e1.pos.x - e2.pos.x);
+        function emitBullet(cannon, gameContext, level) {
+            var _a, _b;
+            const bullet = (_b = (_a = gameContext.entityFactory).bullet) === null || _b === void 0 ? void 0 : _b.call(_a);
+            if (!bullet)
+                return;
+            const players = [...findPlayers(level.entities)];
+            const shouldHoldFire = players.some((player) => {
+                return getDiffX(player, cannon) <= HOLD_FIRE_THRESHOLD;
+            });
+            if (shouldHoldFire)
+                return;
+            const closestPlayer = players.reduce((closest, current) => {
+                const closestDist = getDiffX(closest, cannon);
+                const currentDist = getDiffX(current, cannon);
+                return currentDist < closestDist ? current : closest;
+            });
+            const fireDirection = closestPlayer.pos.x < cannon.pos.x ? -1 : 1;
+            bullet.pos.copy(cannon.pos);
+            bullet.vel.x = 80 * fireDirection;
+            level.entities.add(bullet);
+            cannon.sounds.add('shoot');
+        }
+        return function createCannon() {
+            const cannon = new Entity();
+            cannon.audio = audio;
+            const emitter = new Emitter();
+            emitter.interval = 4;
+            emitter.emitters.push(emitBullet);
+            cannon.addTrait(emitter);
+            return cannon;
+        };
+    }
+
+    var KoopaState;
+    (function (KoopaState) {
+        KoopaState[KoopaState["walking"] = 0] = "walking";
+        KoopaState[KoopaState["hiding"] = 1] = "hiding";
+        KoopaState[KoopaState["panic"] = 2] = "panic";
+    })(KoopaState || (KoopaState = {}));
+    class KoopaBehavior extends Trait {
+        constructor() {
+            super(...arguments);
+            this.state = KoopaState.walking;
+            this.hideTime = 0;
+            this.hideDuration = 5;
+            this.panicSpeed = 300;
+        }
+        collides(us, them) {
+            var _a;
+            if ((_a = us.getTrait(Killable)) === null || _a === void 0 ? void 0 : _a.dead) {
+                return;
+            }
+            const stomper = them.getTrait(Stomper);
+            if (stomper) {
+                if (them.vel.y > us.vel.y) {
+                    this.handleStomp(us, them);
+                }
+                else {
+                    this.handleNudge(us, them);
+                }
+            }
+        }
+        handleStomp(us, them) {
+            switch (this.state) {
+                case KoopaState.walking:
+                    this.hide(us);
+                    break;
+                case KoopaState.hiding:
+                    us.useTrait(Killable, (it) => it.kill());
+                    us.vel.set(100, -200);
+                    us.useTrait(Solid, (s) => (s.obstructs = false));
+                    break;
+                case KoopaState.panic:
+                    this.hide(us);
+                    break;
+            }
+        }
+        handleNudge(us, them) {
+            const kill = () => {
+                const killable = them.getTrait(Killable);
+                if (killable) {
+                    killable.kill();
+                }
+            };
+            let travelDir, impactDir;
+            switch (this.state) {
+                case KoopaState.walking:
+                    kill();
+                    break;
+                case KoopaState.hiding:
+                    this.panic(us, them);
+                    break;
+                case KoopaState.panic:
+                    travelDir = Math.sign(us.vel.x);
+                    impactDir = Math.sign(us.pos.x - them.pos.x);
+                    if (travelDir !== 0 && travelDir !== impactDir) {
+                        kill();
+                    }
+                    break;
+            }
+        }
+        hide(us) {
+            us.useTrait(PendulumMove, (walk) => {
+                us.vel.x = 0;
+                walk.enabled = false;
+                if (!this.walkSpeed) {
+                    this.walkSpeed = walk.speed;
+                }
+                this.state = KoopaState.hiding;
+                this.hideTime = 0;
+            });
+        }
+        unhide(us) {
+            us.useTrait(PendulumMove, (walk) => {
+                walk.enabled = true;
+                if (this.walkSpeed != null)
+                    walk.speed = this.walkSpeed;
+                this.state = KoopaState.walking;
+            });
+        }
+        panic(us, them) {
+            us.useTrait(PendulumMove, (pm) => {
+                pm.speed = this.panicSpeed * Math.sign(them.vel.x);
+                pm.enabled = true;
+            });
+            this.state = KoopaState.panic;
+        }
+        update(us, { deltaTime }) {
+            if (this.state === KoopaState.hiding) {
+                this.hideTime += deltaTime;
+                if (this.hideTime > this.hideDuration) {
+                    this.unhide(us);
+                }
+            }
+        }
+    }
+    class Koopa extends Entity {
+        constructor(sprites) {
+            super();
+            this.sprites = sprites;
+            this.walk = this.addTrait(new PendulumMove());
+            this.behavior = this.addTrait(new KoopaBehavior());
+            this.killable = this.addTrait(new Killable());
+            this.solid = this.addTrait(new Solid());
+            this.physics = this.addTrait(new Physics());
+            this.walkAnim = this.sprites.getAnimation('walk');
+            this.wakeAnim = this.sprites.getAnimation('wake');
+            this.size.set(16, 16);
+            this.offset.set(0, 8);
+        }
+        draw(context) {
+            this.sprites.draw(this.routeAnim(), context, 0, 0, this.vel.x < 0);
+        }
+        routeAnim() {
+            switch (this.behavior.state) {
+                case KoopaState.hiding:
+                    if (this.behavior.hideTime > 3) {
+                        return this.wakeAnim(this.behavior.hideTime);
+                    }
+                    return 'hiding';
+                case KoopaState.panic:
+                    return 'hiding';
+                default:
+                    return this.walkAnim(this.lifetime);
+            }
+        }
+    }
+    async function loadKoopa() {
+        const sprites = await loadSpriteSheet('koopa');
+        return function createKoopa() {
+            return new Koopa(sprites);
+        };
+    }
+
     async function loadEntities(audioContext) {
         const factories = {};
         const addAs = (name) => (factory) => {
             factories[name] = factory;
         };
         await Promise.all([
-            loadMario(audioContext).then(addAs('mario'))
+            loadMario(audioContext).then(addAs('mario')),
+            loadGoomba().then(addAs('goomba')),
+            loadKoopa().then(addAs('koopa')),
+            loadBullet().then(addAs('bullet')),
+            loadCannon(audioContext).then(addAs('cannon')),
         ]);
         return factories;
     }
@@ -895,66 +1281,6 @@
             var _a;
             (_a = this.player) === null || _a === void 0 ? void 0 : _a.pauseAll();
         }
-    }
-
-    const COIN_LIFE_THRESHOLD = 100;
-    class Player extends Trait {
-        constructor() {
-            super();
-            this.name = 'UNNAMED';
-            this.coins = 0;
-            this.lives = 3;
-            this.score = 0;
-            this.listen(Stomper.EVENT_STOMP, () => {
-                this.score += 100;
-            });
-        }
-        addCoins(count) {
-            this.coins += count;
-            while (this.coins >= COIN_LIFE_THRESHOLD) {
-                this.addLives(1);
-                this.coins -= COIN_LIFE_THRESHOLD;
-            }
-            this.queue((entity) => entity.sounds.add('coin'));
-        }
-        addLives(count) {
-            this.lives += count;
-        }
-    }
-
-    class PlayerController extends Trait {
-        constructor(player) {
-            super();
-            this.player = player;
-            this.checkPoint = new Vec2(0, 0);
-        }
-        update(_, __, level) {
-            var _a;
-            if (!level.entities.has(this.player)) {
-                (_a = this.player.getTrait(Killable)) === null || _a === void 0 ? void 0 : _a.revive();
-                this.player.pos.set(this.checkPoint.x, this.checkPoint.y);
-                level.entities.add(this.player);
-            }
-        }
-    }
-
-    function createPlayerEnv(playerEntity) {
-        const playerEnv = new Entity();
-        const playerControl = new PlayerController(playerEntity);
-        playerControl.checkPoint.set(64, 64);
-        playerEnv.addTrait(playerControl);
-        return playerEnv;
-    }
-    function* findPlayers(entities) {
-        for (const entity of entities) {
-            if (entity.getTrait(Player))
-                yield entity;
-        }
-    }
-    function makePlayer(entity, name) {
-        const player = new Player();
-        player.name = name;
-        entity.addTrait(player);
     }
 
     function focusPlayer(level) {
